@@ -53,12 +53,13 @@ type Operation struct {
 
 // Request stores the data of request section.
 type Request struct {
-	Method   string
-	URI      string
-	Params   *Property
-	Headers  *Property
-	Elements *Property
-	Body     *Property
+	Method     string
+	Path       string
+	Properties *Property
+	Query      *Property
+	Headers    *Property
+	Elements   *Property
+	Body       *Property
 }
 
 // Response stores the data of response section.
@@ -87,5 +88,7 @@ type Property struct {
 	Enum             []string
 	Default          string
 	IsRequired       bool
+	Maximum          *float64
+	Minimum          *float64
 	Properties       map[string]*Property
 }

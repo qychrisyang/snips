@@ -92,7 +92,7 @@ func (s *Swagger) parseOperations(
 				mergo.Merge(allProperties[sectionName], property)
 			}
 
-			operation := s.parseOperation(uri, method, specOperation, swagger)
+			operation := s.parseOperation(uri, method, property, specOperation, swagger)
 			if allOperations[sectionName] == nil {
 				allOperations[sectionName] = map[string]*capsules.Operation{}
 			}
@@ -163,11 +163,10 @@ func (s *Swagger) loadService(
 		Operations:  allOperations[serviceName+"Service"],
 	}
 
-	if !strings.Contains(s.Data.Service.Name, "QingStor") {
+	// Be compatible with QingCloud IaaS Services
+	if strings.Contains(s.Data.Service.Name, "QingCloud") {
 		for _, o := range s.Data.Service.Operations {
-			exchange := o.Request.Params
-			o.Request.Params = o.Request.Elements
-			o.Request.Elements = exchange
+			o.Request.Query, o.Request.Elements = o.Request.Elements, o.Request.Query
 		}
 	}
 }
@@ -187,9 +186,10 @@ func (s *Swagger) loadSubService(
 				Operations: operations,
 			}
 
+			// Be compatible with QingCloud IaaS Services
 			if strings.Contains(s.Data.Service.Name, "QingCloud") {
 				for _, o := range s.Data.SubServices[subServiceName].Operations {
-					o.Request.Params, o.Request.Elements = o.Request.Elements, o.Request.Params
+					o.Request.Query, o.Request.Elements = o.Request.Elements, o.Request.Query
 				}
 			}
 		}

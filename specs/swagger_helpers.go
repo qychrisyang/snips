@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
+	"github.com/imdario/mergo"
 
 	"github.com/yunify/snips/capsules"
 )
@@ -186,6 +187,8 @@ func (s *Swagger) parseParameter(
 		Enum:             s.parseEnum(targetParameter.Enum),
 		Default:          defaultValue,
 		IsRequired:       targetParameter.Required,
+		Maximum:          targetParameter.Maximum,
+		Minimum:          targetParameter.Minimum,
 	}
 }
 
@@ -214,7 +217,7 @@ func (s *Swagger) parseHeader(header *spec.Header) *capsules.Property {
 }
 
 func (s *Swagger) parseOperation(
-	uri string, method string,
+	uri string, method string, property *capsules.Property,
 	specOperation *spec.Operation, swagger *spec.Swagger) *capsules.Operation {
 
 	parsedURI := strings.Replace(uri, "?upload_id", "", -1)
@@ -233,8 +236,13 @@ func (s *Swagger) parseOperation(
 		Description: specOperation.Description,
 		Request: &capsules.Request{
 			Method: method,
-			URI:    parsedURI,
-			Params: &capsules.Property{
+			Path:   parsedURI,
+			Properties: &capsules.Property{
+				ID:         specOperation.ID + "Input",
+				Name:       specOperation.Summary + " Input",
+				Properties: map[string]*capsules.Property{},
+			},
+			Query: &capsules.Property{
 				ID:         specOperation.ID + "Input",
 				Name:       specOperation.Summary + " Input",
 				Properties: map[string]*capsules.Property{},
@@ -258,11 +266,17 @@ func (s *Swagger) parseOperation(
 		operation.DocumentationURL = specOperation.ExternalDocs.URL
 	}
 
+	// Fill path params into request params
+	mergo.Merge(operation.Request.Properties, property)
+
 	for _, param := range specOperation.Parameters {
 		switch param.In {
+		case "path":
+			property := s.parseParameter(&param, &swagger.Parameters)
+			operation.Request.Properties.Properties[param.Name] = property
 		case "query":
 			property := s.parseParameter(&param, &swagger.Parameters)
-			operation.Request.Params.Properties[param.Name] = property
+			operation.Request.Query.Properties[param.Name] = property
 		case "header":
 			property := s.parseParameter(&param, &swagger.Parameters)
 			operation.Request.Headers.Properties[param.Name] = property
