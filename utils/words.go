@@ -17,11 +17,39 @@
 package utils
 
 var capitalizedToCapitalizedWordsMap = map[string]string{
-	"Dns":     "DNS",
-	"Dyn":     "DYN",
-	"Eip":     "EIP",
-	"Keypair": "KeyPair",
-	"Vxnet":   "VxNet",
+	"Dns":       "DNS",
+	"Dyn":       "DYN",
+	"Eip":       "EIP",
+	"Keypair":   "KeyPair",
+	"Vxnet":     "VxNet",
+
+	"ITEM":      "Item",
+	"CREATE":    "Create",
+
+	"UTC-1":     "UTCMinus1",
+	"UTC-2":     "UTCMinus2",
+	"UTC-3":     "UTCMinus3",
+	"UTC-4":     "UTCMinus4",
+	"UTC-5":     "UTCMinus5",
+	"UTC-6":     "UTCMinus6",
+	"UTC-7":     "UTCMinus7",
+	"UTC-8":     "UTCMinus8",
+	"UTC-9":     "UTCMinus9",
+	"UTC-10":    "UTCMinus10",
+	"UTC-11":    "UTCMinus11",
+	"UTC-12":    "UTCMinus12",
+	"UTC+1":     "UTCPlus1",
+	"UTC+2":     "UTCPlus2",
+	"UTC+3":     "UTCPlus3",
+	"UTC+4":     "UTCPlus4",
+	"UTC+5":     "UTCPlus5",
+	"UTC+6":     "UTCPlus6",
+	"UTC+7":     "UTCPlus7",
+	"UTC+8":     "UTCPlus8",
+	"UTC+9":     "UTCPlus9",
+	"UTC+10":    "UTCPlus10",
+	"UTC+11":    "UTCPlus11",
+	"UTC+12":    "UTCPlus12",
 }
 
 var lowerCaseToLowercaseWordsMap = map[string]string{
@@ -74,6 +102,11 @@ var lowerCaseToCapitalizedWordsMap = map[string]string{
 	"vcpus":         "VCPUs",
 	"vxnet":         "VxNet",
 	"vxnets":        "VxNets",
+
+	"sso":           "SSO",
+	"ldap":          "LDAP",
+	"ad":            "AD",
+	"utc":           "UTC",
 }
 
 var abbreviateWordsMap = []string{
@@ -107,4 +140,9 @@ var abbreviateWordsMap = []string{
 	"URL",
 	"VCPUs",
 	"VxNet",
+
+	"SSO",
+	"LDAP",
+	"AD",
+	"UTC",
 }

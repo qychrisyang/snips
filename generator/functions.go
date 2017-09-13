@@ -46,6 +46,21 @@ var funcMap = template.FuncMap{
 	"firstPropertyIDInCustomizedType": firstPropertyIDInCustomizedType,
 
 	"statusText": statusText,
+
+	"contains": contains,
+	"indexOf": indexOf,
+	"substr": substr,
+
+	"plus": plus,
+	"plusOne": plusOne,
+	"minus": minus,
+	"minusOne": minusOne,
+
+	"hasURIParams": hasURIParams,
+	"uriParams": uriParams,
+	"formatURI": formatURI,
+
+	"isFirst": isFirst,
 }
 
 func lower(original string) string {
@@ -111,4 +126,92 @@ func statusText(statusCode int) (statusText string) {
 	statusText = strings.Replace(statusText, " ", "", -1)
 
 	return
+}
+
+
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
+
+func indexOf(s, sep string) int {
+	return strings.Index(s, sep)
+}
+
+func substr(s string, start, end int) string {
+	rs := []rune(s)
+    rl := len(rs)
+        
+    if start > end {
+        start, end = end, start
+    }
+    
+    if start < 0 {
+        start = 0
+    }
+
+    if start > rl {
+        start = rl
+    }
+
+    if end < 0 {
+        end = 0
+    }
+
+    if end > rl {
+        end = rl
+    }
+
+    return string(rs[start:end])
+}
+
+func plus(i, size int) int {
+	return i + size
+}
+
+func plusOne(i int) int {
+	return plus(i, 1)
+}
+
+func minus(i, size int) int {
+	return i - size
+}
+
+func minusOne(i int) int {
+	return minus(i, 1)
+}
+
+func hasURIParams(uri string) bool {
+	return contains(uri, "{") && contains(uri, "}")
+}
+
+func uriParams(uri string) []string {
+	params := []string{}
+
+	for hasURIParams(uri) {
+		startIndex := indexOf(uri, "{") + 1
+		endIndex := indexOf(uri, "}")
+		param := utils.LowerFirstWord(utils.CamelCase(substr(uri, startIndex, endIndex)))
+		params = append(params, param)
+
+		uri = replace(uri, "{", "", 1)
+		uri = replace(uri, "}", "", 1)
+    }
+
+    return params
+}
+
+func formatURI(uri string) string {
+	for hasURIParams(uri) {
+		startIndex := indexOf(uri, "{") + 1
+		endIndex := indexOf(uri, "}")
+		param := substr(uri, startIndex, endIndex)
+		uri = replace(uri, "{" + param + "}", "\\(input." + utils.LowerFirstWord(utils.CamelCase(param)) + ")", 1)
+    } 
+
+    return uri
+}
+
+func isFirst(stringArray []string, content string) bool {
+	return stringArray[0] == content
 }
