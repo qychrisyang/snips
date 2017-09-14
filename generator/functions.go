@@ -56,9 +56,9 @@ var funcMap = template.FuncMap{
 	"minus": minus,
 	"minusOne": minusOne,
 
-	"hasURIParams": hasURIParams,
-	"uriParams": uriParams,
-	"formatURI": formatURI,
+	"hasPathParams": hasPathParams,
+	"pathParams": pathParams,
+	"formatPath": formatPath,
 
 	"isFirst": isFirst,
 }
@@ -181,35 +181,35 @@ func minusOne(i int) int {
 	return minus(i, 1)
 }
 
-func hasURIParams(uri string) bool {
-	return contains(uri, "{") && contains(uri, "}")
+func hasPathParams(path string) bool {
+	return contains(path, "{") && contains(path, "}")
 }
 
-func uriParams(uri string) []string {
+func pathParams(path string) []string {
 	params := []string{}
 
-	for hasURIParams(uri) {
-		startIndex := indexOf(uri, "{") + 1
-		endIndex := indexOf(uri, "}")
-		param := utils.LowerFirstWord(utils.CamelCase(substr(uri, startIndex, endIndex)))
+	for hasPathParams(path) {
+		startIndex := indexOf(path, "{") + 1
+		endIndex := indexOf(path, "}")
+		param := utils.LowerFirstWord(utils.CamelCase(substr(path, startIndex, endIndex)))
 		params = append(params, param)
 
-		uri = replace(uri, "{", "", 1)
-		uri = replace(uri, "}", "", 1)
+		path = replace(path, "{", "", 1)
+		path = replace(path, "}", "", 1)
     }
 
     return params
 }
 
-func formatURI(uri string) string {
-	for hasURIParams(uri) {
-		startIndex := indexOf(uri, "{") + 1
-		endIndex := indexOf(uri, "}")
-		param := substr(uri, startIndex, endIndex)
-		uri = replace(uri, "{" + param + "}", "\\(input." + utils.LowerFirstWord(utils.CamelCase(param)) + ")", 1)
+func formatPath(path string) string {
+	for hasPathParams(path) {
+		startIndex := indexOf(path, "{") + 1
+		endIndex := indexOf(path, "}")
+		param := substr(path, startIndex, endIndex)
+		path = replace(path, "{" + param + "}", "\\(input." + utils.LowerFirstWord(utils.CamelCase(param)) + ")", 1)
     } 
 
-    return uri
+    return path
 }
 
 func isFirst(stringArray []string, content string) bool {
