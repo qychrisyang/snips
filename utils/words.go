@@ -81,6 +81,7 @@ var lowerCaseToCapitalizedWordsMap = map[string]string{
 	"lastest":       "Latest", // Fix typo
 	"loadbalancer":  "LoadBalancer",
 	"loadbalancers": "LoadBalancers",
+	"md5":           "MD5",
 	"newsid":        "NewSID",
 	"nic":           "NIC",
 	"os":            "OS",
@@ -126,6 +127,7 @@ var abbreviateWordsMap = []string{
 	"IPSets",
 	"MD5",
 	"NIC",
+	"OAuth",
 	"OS",
 	"OPT",
 	"QingStor",
@@ -133,6 +135,7 @@ var abbreviateWordsMap = []string{
 	"QS",
 	"RDB",
 	"SQL",
+	"SSO",
 	"TMP",
 	"TMPDir",
 	"TRX",
