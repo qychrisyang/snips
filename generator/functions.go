@@ -51,16 +51,13 @@ var funcMap = template.FuncMap{
 	"indexOf": indexOf,
 	"substr": substr,
 
-	"plus": plus,
-	"plusOne": plusOne,
-	"minus": minus,
-	"minusOne": minusOne,
-
 	"hasPathParams": hasPathParams,
 	"pathParams": pathParams,
 	"formatPath": formatPath,
 
 	"isFirst": isFirst,
+
+	"joinResponses": joinResponses,
 }
 
 func lower(original string) string {
@@ -165,22 +162,6 @@ func substr(s string, start, end int) string {
     return string(rs[start:end])
 }
 
-func plus(i, size int) int {
-	return i + size
-}
-
-func plusOne(i int) int {
-	return plus(i, 1)
-}
-
-func minus(i, size int) int {
-	return i - size
-}
-
-func minusOne(i int) int {
-	return minus(i, 1)
-}
-
 func hasPathParams(path string) bool {
 	return contains(path, "{") && contains(path, "}")
 }
@@ -214,4 +195,26 @@ func formatPath(path string) string {
 
 func isFirst(stringArray []string, content string) bool {
 	return stringArray[0] == content
+}
+
+func joinResponses(operation capsules.Operation) *capsules.Response {
+	var response *capsules.Response
+
+	for _, value := range operation.Responses {
+		if response == nil {
+			response = value
+		} else {	
+			appenProperties(response.Headers, value.Headers)
+			appenProperties(response.Elements, value.Elements)
+			appenProperties(response.Body, value.Body)
+		}
+	}
+
+	return response
+}
+
+func appenProperties(proeprty1 *capsules.Property, property2 *capsules.Property) {
+	for key, value := range property2.Properties {
+		proeprty1.Properties[key] = value
+	}
 }
