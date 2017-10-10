@@ -144,7 +144,18 @@ func (s *Swagger) parseSchema(schema *spec.Schema) *capsules.Property {
 		Default:     defaultValue,
 		Properties:  properties,
 		CommonValidations: capsules.CommonValidations{
-			Enum: s.parseEnum(targetSchema.Enum),
+			Enum:             s.parseEnum(targetSchema.Enum),
+			Maximum:          targetSchema.Maximum,
+			Minimum:          targetSchema.Minimum,
+			MaxLength:        targetSchema.MaxLength,
+			MinLength:        targetSchema.MinLength,
+			ExclusiveMaximum: targetSchema.ExclusiveMaximum,
+			ExclusiveMinimum: targetSchema.ExclusiveMinimum,
+			Pattern:          targetSchema.Pattern,
+			MaxItems:         targetSchema.MaxItems,
+			MinItems:         targetSchema.MinItems,
+			UniqueItems:      targetSchema.UniqueItems,
+			MultipleOf:       targetSchema.MultipleOf,
 		},
 	}
 }
@@ -272,6 +283,11 @@ func (s *Swagger) parseOperation(
 				Name:       specOperation.Summary + " Input",
 				Properties: map[string]*capsules.Property{},
 			},
+			FormData: &capsules.Property{
+				ID:         specOperation.ID + "Input",
+				Name:       specOperation.Summary + " Input",
+				Properties: map[string]*capsules.Property{},
+			},
 			Body: &capsules.Property{},
 		},
 		Responses: make(map[int]*capsules.Response),
@@ -295,6 +311,9 @@ func (s *Swagger) parseOperation(
 		case "header":
 			property := s.parseParameter(&param, &swagger.Parameters)
 			operation.Request.Headers.Properties[param.Name] = property
+		case "formData":
+			property := s.parseParameter(&param, &swagger.Parameters)
+			operation.Request.FormData.Properties[param.Name] = property
 		case "body":
 			operation.Request.Body = s.parseSchema(param.Schema)
 			if operation.Request.Body.Description == "" && param.Description != "" {

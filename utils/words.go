@@ -100,6 +100,7 @@ var lowerCaseToCapitalizedWordsMap = map[string]string{
 	"uri":           "URI",
 	"url":           "URL",
 	"usb":           "USB",
+	"uuid":          "UUID",
 	"vcpus":         "VCPUs",
 	"vxnet":         "VxNet",
 	"vxnets":        "VxNets",
@@ -141,6 +142,7 @@ var abbreviateWordsMap = []string{
 	"TRX",
 	"UI",
 	"URL",
+	"UUID",
 	"VCPUs",
 	"VxNet",
 
