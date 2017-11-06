@@ -47,17 +47,10 @@ var funcMap = template.FuncMap{
 
 	"statusText": statusText,
 
-	"contains": contains,
-	"indexOf": indexOf,
-	"substr": substr,
-
-	"hasPathParams": hasPathParams,
-	"pathParams": pathParams,
-	"formatPath": formatPath,
-
+	"formatSwiftPath": formatSwiftPath,
 	"isFirst": isFirst,
-
 	"joinResponses": joinResponses,
+	"isUploadOperation": isUploadOperation,
 }
 
 func lower(original string) string {
@@ -172,8 +165,7 @@ func pathParams(path string) []string {
 	for hasPathParams(path) {
 		startIndex := indexOf(path, "{") + 1
 		endIndex := indexOf(path, "}")
-		param := utils.LowerFirstWord(utils.CamelCase(substr(path, startIndex, endIndex)))
-		params = append(params, param)
+		params = append(params, substr(path, startIndex, endIndex))
 
 		path = replace(path, "{", "", 1)
 		path = replace(path, "}", "", 1)
@@ -182,15 +174,20 @@ func pathParams(path string) []string {
     return params
 }
 
-func formatPath(path string) string {
-	for hasPathParams(path) {
-		startIndex := indexOf(path, "{") + 1
-		endIndex := indexOf(path, "}")
-		param := substr(path, startIndex, endIndex)
-		path = replace(path, "{" + param + "}", "\\(input." + utils.LowerFirstWord(utils.CamelCase(param)) + ")", 1)
-    } 
-
-    return path
+func formatSwiftPath(operation capsules.Operation) string {
+	var path = operation.Request.Path
+	var params = pathParams(path)
+	
+	for _, property := range operation.Request.Properties.Properties {
+		for _, param := range params {
+			if contains(param, property.ID) {
+				path = replace(path, "{" + param + "}", "\\(input." + utils.LowerFirstWord(utils.CamelCase(property.ID)) + "!)", 1)
+				break
+			}
+		}
+	}
+	
+	return path
 }
 
 func isFirst(stringArray []string, content string) bool {
@@ -217,4 +214,18 @@ func appenProperties(proeprty1 *capsules.Property, property2 *capsules.Property)
 	for key, value := range property2.Properties {
 		proeprty1.Properties[key] = value
 	}
+}
+
+func isUploadOperation(operation capsules.Operation) bool {
+	if operation.Request.Body.Type == "binary" {
+		return true
+	}
+
+	for _, property := range operation.Request.FormData.Properties {
+		if property.Type == "file" {
+			return true
+		}
+	}
+
+	return false
 }
