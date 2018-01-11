@@ -17,6 +17,7 @@
 package generator
 
 import (
+	"regexp"
 	"net/http"
 	"sort"
 	"strings"
@@ -47,10 +48,13 @@ var funcMap = template.FuncMap{
 
 	"statusText": statusText,
 
+	"contains": contains,
 	"formatSwiftPath": formatSwiftPath,
 	"isFirst": isFirst,
 	"joinResponses": joinResponses,
 	"isUploadOperation": isUploadOperation,
+
+	"isLetterFirstOfWord": isLetterFirstOfWord,
 }
 
 func lower(original string) string {
@@ -228,4 +232,8 @@ func isUploadOperation(operation capsules.Operation) bool {
 	}
 
 	return false
+}
+
+func isLetterFirstOfWord(word string) bool {
+	return regexp.MustCompile("^[^A-Za-z]").MatchString(word)
 }
