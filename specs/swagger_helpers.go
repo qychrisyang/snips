@@ -18,6 +18,7 @@ package specs
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-openapi/spec"
@@ -41,6 +42,8 @@ func (s *Swagger) intermediateType(typeName, formatName string) string {
 		"string":                   "string",
 		"string-byte":              "base64",
 		"string-binary":            "binary",
+		"string-boolean":           "boolean",
+		"string-email":             "email",
 		"string-password":          "string",
 		"string-date-time":         "timestamp",
 		"string-date-time-rfc822":  "timestamp",
@@ -96,29 +99,33 @@ func (s *Swagger) parseEnum(enum []interface{}) []string {
 	return enums
 }
 
-func (s *Swagger) parseSchema(schema *spec.Schema) *capsules.Property {
+func (s *Swagger) parseSchema(name string, schema *spec.Schema) *capsules.Property {
 	targetSchema := schema
 	targetType := ""
 	targetExtraType := ""
 	targetFormat := ""
 
 	if refTokens := targetSchema.Ref.GetPointer().DecodedTokens(); len(refTokens) > 0 {
-		targetType = "object"
-		targetExtraType = s.intermediateTypeOfSchema(targetSchema)
-
+		targetType = strings.Join(schema.Type, "")
+		switch targetType {
+		case "array":
+			targetExtraType = s.intermediateTypeOfSchema(targetSchema.Items.Schema)
+		default:
+			targetType = "object"
+			targetExtraType = s.intermediateTypeOfSchema(targetSchema)
+		}
 	} else if targetSchema.AdditionalProperties != nil &&
 		targetSchema.AdditionalProperties.Schema != nil &&
 		targetSchema.AdditionalProperties.Allows {
 		targetSchema = targetSchema.AdditionalProperties.Schema
 		targetType = "map"
 		targetExtraType = s.intermediateTypeOfSchema(targetSchema)
-
 	} else {
 		targetType = s.intermediateTypeOfSchema(targetSchema)
-		if targetType == "array" {
+		switch targetType {
+		case "array":
 			targetExtraType = s.intermediateTypeOfSchema(targetSchema.Items.Schema)
-		}
-		if targetType == "timestamp" {
+		case "timestamp":
 			targetFormat = s.intermediateTypeOfTime(targetSchema.Format)
 		}
 	}
@@ -130,7 +137,7 @@ func (s *Swagger) parseSchema(schema *spec.Schema) *capsules.Property {
 
 	properties := map[string]*capsules.Property{}
 	for name, schema := range schema.SchemaProps.Properties {
-		property := s.parseSchema(&schema)
+		property := s.parseSchema(name, &schema)
 		property.ID = name
 		property.Name = name
 		properties[name] = property
@@ -180,7 +187,9 @@ func (s *Swagger) parseParameter(
 		targetFormat = s.intermediateTypeOfTime(targetParameter.Format)
 	}
 	if targetType == "array" {
-		targetExtraType = targetParameter.Items.Type
+		targetExtraType = s.intermediateType(
+			targetParameter.Items.Type, targetParameter.Items.Format,
+		)
 		targetCollectionFormat = targetParameter.CollectionFormat
 	}
 
@@ -259,6 +268,7 @@ func (s *Swagger) parseOperation(
 	operation := &capsules.Operation{
 		ID:          specOperation.ID,
 		Name:        specOperation.Summary,
+		Consumes:    specOperation.Consumes,
 		Description: specOperation.Description,
 		Request: &capsules.Request{
 			Method: method,
@@ -315,13 +325,13 @@ func (s *Swagger) parseOperation(
 			property := s.parseParameter(&param, &swagger.Parameters)
 			operation.Request.FormData.Properties[param.Name] = property
 		case "body":
-			operation.Request.Body = s.parseSchema(param.Schema)
+			operation.Request.Body = s.parseSchema(param.Name, param.Schema)
 			if operation.Request.Body.Description == "" && param.Description != "" {
 				operation.Request.Body.Description = param.Description
 			}
 
 			for name, schema := range param.Schema.Properties {
-				property := s.parseSchema(&schema)
+				property := s.parseSchema(name, &schema)
 				property.Name = name
 				property.ID = name
 				operation.Request.Elements.Properties[name] = property
@@ -361,10 +371,10 @@ func (s *Swagger) parseOperation(
 		}
 
 		if specResponse.Schema != nil {
-			operation.Responses[code].Body = s.parseSchema(specResponse.Schema)
+			operation.Responses[code].Body = s.parseSchema(strconv.Itoa(code), specResponse.Schema)
 
 			for name, schema := range specResponse.Schema.Properties {
-				property := s.parseSchema(&schema)
+				property := s.parseSchema(name, &schema)
 				property.Name = name
 				property.ID = name
 				operation.Responses[code].Elements.Properties[name] = property
