@@ -17,6 +17,7 @@
 package generator
 
 import (
+	"regexp"
 	"net/http"
 	"sort"
 	"strings"
@@ -47,6 +48,14 @@ var funcMap = template.FuncMap{
 	"firstPropertyIDInCustomizedType": firstPropertyIDInCustomizedType,
 
 	"statusText": statusText,
+
+	"contains": contains,
+	"formatSwiftPath": formatSwiftPath,
+	"isFirst": isFirst,
+	"joinResponses": joinResponses,
+	"isUploadOperation": isUploadOperation,
+
+	"isLetterFirstOfWord": isLetterFirstOfWord,
 }
 
 func lower(original string) string {
@@ -129,4 +138,120 @@ func exist(data interface{}, index string) bool {
 	default:
 		return false
 	}
+}
+
+
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
+
+func indexOf(s, sep string) int {
+	return strings.Index(s, sep)
+}
+
+func substr(s string, start, end int) string {
+	rs := []rune(s)
+    rl := len(rs)
+        
+    if start > end {
+        start, end = end, start
+    }
+    
+    if start < 0 {
+        start = 0
+    }
+
+    if start > rl {
+        start = rl
+    }
+
+    if end < 0 {
+        end = 0
+    }
+
+    if end > rl {
+        end = rl
+    }
+
+    return string(rs[start:end])
+}
+
+func hasPathParams(path string) bool {
+	return contains(path, "{") && contains(path, "}")
+}
+
+func pathParams(path string) []string {
+	params := []string{}
+
+	for hasPathParams(path) {
+		startIndex := indexOf(path, "{") + 1
+		endIndex := indexOf(path, "}")
+		params = append(params, substr(path, startIndex, endIndex))
+
+		path = replace(path, "{", "", 1)
+		path = replace(path, "}", "", 1)
+    }
+
+    return params
+}
+
+func formatSwiftPath(operation capsules.Operation) string {
+	var path = operation.Request.Path
+	var params = pathParams(path)
+	
+	for _, property := range operation.Request.Properties.Properties {
+		for _, param := range params {
+			if contains(param, property.ID) {
+				path = replace(path, "{" + param + "}", "\\(input." + utils.LowerFirstWord(utils.CamelCase(property.ID)) + "!)", 1)
+				break
+			}
+		}
+	}
+	
+	return path
+}
+
+func isFirst(stringArray []string, content string) bool {
+	return stringArray[0] == content
+}
+
+func joinResponses(operation capsules.Operation) *capsules.Response {
+	var response *capsules.Response
+
+	for _, value := range operation.Responses {
+		if response == nil {
+			response = value
+		} else {	
+			appenProperties(response.Headers, value.Headers)
+			appenProperties(response.Elements, value.Elements)
+			appenProperties(response.Body, value.Body)
+		}
+	}
+
+	return response
+}
+
+func appenProperties(proeprty1 *capsules.Property, property2 *capsules.Property) {
+	for key, value := range property2.Properties {
+		proeprty1.Properties[key] = value
+	}
+}
+
+func isUploadOperation(operation capsules.Operation) bool {
+	if operation.Request.Body.Type == "binary" {
+		return true
+	}
+
+	for _, property := range operation.Request.FormData.Properties {
+		if property.Type == "file" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isLetterFirstOfWord(word string) bool {
+	return regexp.MustCompile("^[^A-Za-z]").MatchString(word)
 }
