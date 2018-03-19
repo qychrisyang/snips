@@ -111,6 +111,7 @@ var lowerCaseToCapitalizedWordsMap = map[string]string{
 	"ldap":          "LDAP",
 	"ad":            "AD",
 	"utc":           "UTC",
+	"sha":			 "SHA",
 }
 
 var abbreviateWordsMap = []string{
@@ -152,4 +153,5 @@ var abbreviateWordsMap = []string{
 	"LDAP",
 	"AD",
 	"UTC",
+	"SHA",
 }
