@@ -33,8 +33,9 @@ func (s *Swagger) intermediateType(typeName, formatName string) string {
 		"date":                     "timestamp",
 		"integer":                  "integer",
 		"integer-int32":            "integer",
-		"integer-uint32":           "unsigned-integer",
 		"integer-int64":            "long",
+		"integer-uint":             "unsigned-integer",
+		"integer-uint32":           "unsigned-integer",
 		"integer-uint64":           "unsigned-long",
 		"number":                   "float",
 		"number-float":             "float",
@@ -104,12 +105,19 @@ func (s *Swagger) parseSchema(name string, schema *spec.Schema) *capsules.Proper
 	targetType := ""
 	targetExtraType := ""
 	targetFormat := ""
+	targetItems := &capsules.Property{}
 
 	if refTokens := targetSchema.Ref.GetPointer().DecodedTokens(); len(refTokens) > 0 {
 		targetType = strings.Join(schema.Type, "")
 		switch targetType {
 		case "array":
-			targetExtraType = s.intermediateTypeOfSchema(targetSchema.Items.Schema)
+			targetItems = &capsules.Property{
+				Type: s.intermediateTypeOfSchema(targetSchema.Items.Schema),
+				CommonValidations: capsules.CommonValidations{
+					Enum: s.parseEnum(targetSchema.Items.Schema.Enum),
+				},
+			}
+			targetExtraType = targetItems.Type
 		default:
 			targetType = "object"
 			targetExtraType = s.intermediateTypeOfSchema(targetSchema)
@@ -124,7 +132,13 @@ func (s *Swagger) parseSchema(name string, schema *spec.Schema) *capsules.Proper
 		targetType = s.intermediateTypeOfSchema(targetSchema)
 		switch targetType {
 		case "array":
-			targetExtraType = s.intermediateTypeOfSchema(targetSchema.Items.Schema)
+			targetItems = &capsules.Property{
+				Type: s.intermediateTypeOfSchema(targetSchema.Items.Schema),
+				CommonValidations: capsules.CommonValidations{
+					Enum: s.parseEnum(targetSchema.Items.Schema.Enum),
+				},
+			}
+			targetExtraType = targetItems.Type
 		case "timestamp":
 			targetFormat = s.intermediateTypeOfTime(targetSchema.Format)
 		}
@@ -147,6 +161,7 @@ func (s *Swagger) parseSchema(name string, schema *spec.Schema) *capsules.Proper
 		Description: targetSchema.Description,
 		Type:        targetType,
 		ExtraType:   targetExtraType,
+		Items:       targetItems,
 		Format:      targetFormat,
 		Default:     defaultValue,
 		Properties:  properties,
@@ -176,6 +191,7 @@ func (s *Swagger) parseParameter(
 	targetFormat := ""
 	targetExtraType := ""
 	targetCollectionFormat := ""
+	targetItems := &capsules.Property{}
 
 	if refTokens := parameter.Ref.GetPointer().DecodedTokens(); len(refTokens) > 0 {
 		current := (*parameters)[refTokens[len(refTokens)-1]]
@@ -187,9 +203,15 @@ func (s *Swagger) parseParameter(
 		targetFormat = s.intermediateTypeOfTime(targetParameter.Format)
 	}
 	if targetType == "array" {
-		targetExtraType = s.intermediateType(
-			targetParameter.Items.Type, targetParameter.Items.Format,
-		)
+		targetItems = &capsules.Property{
+			Type: s.intermediateType(
+				targetParameter.Items.Type, targetParameter.Items.Format,
+			),
+			CommonValidations: capsules.CommonValidations{
+				Enum: s.parseEnum(targetParameter.Items.Enum),
+			},
+		}
+		targetExtraType = targetItems.Type
 		targetCollectionFormat = targetParameter.CollectionFormat
 	}
 
@@ -202,8 +224,9 @@ func (s *Swagger) parseParameter(
 		ID:               targetParameter.Name,
 		Name:             targetParameter.Name,
 		Description:      targetParameter.Description,
-		Type:             targetType,
 		ExtraType:        targetExtraType,
+		Type:             targetType,
+		Items:            targetItems,
 		Format:           targetFormat,
 		CollectionFormat: targetCollectionFormat,
 		Default:          defaultValue,
@@ -229,6 +252,7 @@ func (s *Swagger) parseHeader(header *spec.Header) *capsules.Property {
 	targetHeader := header
 	targetType := ""
 	targetFormat := ""
+	targetItems := &capsules.Property{}
 
 	targetType = s.intermediateType(targetHeader.Type, targetHeader.Format)
 	if targetType == "timestamp" {
@@ -245,9 +269,45 @@ func (s *Swagger) parseHeader(header *spec.Header) *capsules.Property {
 		Type:        targetType,
 		Format:      targetFormat,
 		Default:     defaultValue,
+		Items:       targetItems,
 		CommonValidations: capsules.CommonValidations{
 			Enum: s.parseEnum(targetHeader.Enum),
 		},
+	}
+}
+
+func (s *Swagger) parseParameters(operation *capsules.Operation, parameter *spec.Parameter, swagger *spec.Swagger) {
+	switch parameter.In {
+	case "path":
+		property := s.parseParameter(parameter, &swagger.Parameters)
+		operation.Request.Properties.Properties[parameter.Name] = property
+	case "query":
+		property := s.parseParameter(parameter, &swagger.Parameters)
+		operation.Request.Query.Properties[parameter.Name] = property
+	case "header":
+		property := s.parseParameter(parameter, &swagger.Parameters)
+		operation.Request.Headers.Properties[parameter.Name] = property
+	case "formData":
+		property := s.parseParameter(parameter, &swagger.Parameters)
+		operation.Request.FormData.Properties[parameter.Name] = property
+	case "body":
+		operation.Request.Body = s.parseSchema(parameter.Name, parameter.Schema)
+		if operation.Request.Body.Description == "" && parameter.Description != "" {
+			operation.Request.Body.Description = parameter.Description
+		}
+
+		for name, schema := range parameter.Schema.Properties {
+			property := s.parseSchema(name, &schema)
+			property.Name = name
+			property.ID = name
+			operation.Request.Elements.Properties[name] = property
+		}
+
+		for _, schemaKey := range parameter.Schema.Required {
+			if operation.Request.Elements.Properties[schemaKey] != nil {
+				operation.Request.Elements.Properties[schemaKey].IsRequired = true
+			}
+		}
 	}
 }
 
@@ -310,39 +370,8 @@ func (s *Swagger) parseOperation(
 	// Fill path params into request params
 	mergo.Merge(operation.Request.Properties, property)
 
-	for _, param := range specOperation.Parameters {
-		switch param.In {
-		case "path":
-			property := s.parseParameter(&param, &swagger.Parameters)
-			operation.Request.Properties.Properties[param.Name] = property
-		case "query":
-			property := s.parseParameter(&param, &swagger.Parameters)
-			operation.Request.Query.Properties[param.Name] = property
-		case "header":
-			property := s.parseParameter(&param, &swagger.Parameters)
-			operation.Request.Headers.Properties[param.Name] = property
-		case "formData":
-			property := s.parseParameter(&param, &swagger.Parameters)
-			operation.Request.FormData.Properties[param.Name] = property
-		case "body":
-			operation.Request.Body = s.parseSchema(param.Name, param.Schema)
-			if operation.Request.Body.Description == "" && param.Description != "" {
-				operation.Request.Body.Description = param.Description
-			}
-
-			for name, schema := range param.Schema.Properties {
-				property := s.parseSchema(name, &schema)
-				property.Name = name
-				property.ID = name
-				operation.Request.Elements.Properties[name] = property
-			}
-
-			for _, schemaKey := range param.Schema.Required {
-				if operation.Request.Elements.Properties[schemaKey] != nil {
-					operation.Request.Elements.Properties[schemaKey].IsRequired = true
-				}
-			}
-		}
+	for _, parameter := range specOperation.Parameters {
+		s.parseParameters(operation, &parameter, swagger)
 	}
 
 	for code, specResponse := range specOperation.Responses.ResponsesProps.StatusCodeResponses {
